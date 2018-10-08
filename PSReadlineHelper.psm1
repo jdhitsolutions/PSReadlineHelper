@@ -157,7 +157,7 @@ Set-PSReadlineKeyHandler -Key Alt+w -BriefDescription SaveInHistory -LongDescrip
 # needing to type cd and won't change the command line.
 
 #pre-populate a global variable
-$global:PSReadlineMarks = @{
+$PSReadlineMarks = @{
     [char]"s" = "c:\scripts"
     [char]"d" = "~\documents"
 }
@@ -215,50 +215,20 @@ if ($ver -lt 2.0.0) {
 }
 #endregion
 
+Export-ModuleMember -Variable PSReadlineMarks
 
 <#
-Set-PSReadlineOption -AddToHistoryHandler {
-Param($line)
-
-if ($global:myHistoryCSV) {
-    [pscustomobject]@{
-        Computername = $env:COMPUTERNAME
-        Username = "$env:USERDOMAIN\$env:username"
-        Host = $host.name
-        PSVersion = $PSVersionTable.PSVersion
-        BuildVersion = $PSVersionTable.BuildVersion
-        Date = Get-Date
-        Path = (Get-Location).Path
-        Line = $line
-    } | Export-CSV -Path $global:myHistoryCSV -Append -NoTypeInformation
-    return $True
-}
-else {
-    return $false
-}
-<#
-#Add commands to PSReadline history if more than 3 characters and not a help command
-#and copy the command to the clipboard
-if ($line.length -ge 3 -AND $line -notmatch "^get-help|^help") {
-        #copy the line to the clipboard
-        Set-Clipboard -Value $line
-        return $True
-    }
-    else {
-        return $False
-    } #>
-
-
-
 $msg = @"
+PSReadLineHelper
+****************
 
 Added these options:
-$(Get-myPSReadline | format-table | Out-string)
+$($(Get-myPSReadline | format-table | Out-string).Trim())
 
 Added these handlers:
-$(Get-MyPSReadlineKey | Out-String)
+$($(Get-MyPSReadlineKey | Out-String).Trim())
 
 "@
 
-
-Write-Verbose $msg
+Write-Host $msg -ForegroundColor green
+#>

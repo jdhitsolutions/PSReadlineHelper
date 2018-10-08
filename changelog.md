@@ -1,4 +1,10 @@
-# Changelog for MyPSReadLine
+# Change Log for MyPSReadLine
+
+## v0.6.0
+
++ code cleanup
++ Added requirement for ConsoleHost
++ Published to the PowerShell Gallery
 
 ## v0.5.0
 
