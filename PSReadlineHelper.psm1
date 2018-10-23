@@ -1,14 +1,8 @@
-﻿#requires -version 5.1
-
-#not all commands and features of this module will not work with PSReadline version 2.0.0
+﻿#not all commands and features of this module will not work with PSReadline version 2.0.
 
 $ver = (get-module psreadline).version
-if ( $ve -gt 1.2) {
-    write-warning "Some commands in this module will not work with newer versions of PSReadline."
-    #bail out
-    #return
-}
-. $PSScriptRoot\PSReadlinehelpers.ps1
+
+. $psscriptroot\PSReadlinehelpers.ps1
 
 #region my PSReadlineOptions
 
@@ -24,12 +18,10 @@ $token = @{
     ForegroundColor = "Cyan"
 }
 }
+
 Set-PSReadlineOption @token
 
 $options = @{
-    #ContinuationPromptForegroundColor = "White"
-    #ContinuationPromptBackgroundColor = "Magenta"
-    #ErrorForegroundColor = "Green"
     HistoryNoDuplicates = $True
     HistorySaveStyle = "SaveIncrementally"
     DingDuration = 300
@@ -52,75 +44,82 @@ Set-PSReadlineKeyHandler -key Ctrl+h -BriefDescription "Open PSReadlineHistory" 
     Invoke-Item -Path $(Get-PSReadlineOption).HistorySavePath
 }
 
-Set-PSReadlineKeyHandler -key Ctrl+Alt+F -BriefDescription "Function Menu" -Description "Display all functions as menu using Out-GridView. [$($env:username)]" -ScriptBlock {
+if ($PSedition -eq 'Desktop') {
 
-    $line = $null
-    $cursor = $null
-    [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
+    Set-PSReadlineKeyHandler -key Ctrl+Alt+F -BriefDescription "Function Menu" -Description "Display all functions as menu using Out-GridView. [$($env:username)]" -ScriptBlock {
 
-    #filter out the built-in functions for changing drives and a few others
-    Get-Childitem -path function: | Where-Object {$_.name -notmatch "([A-Za-z]:)|(Get-Verb)|(prompt)|(cd)|(clear-host)|(more)|(pause)"} |
+        $line = $null
+        $cursor = $null
+        [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
+
+        #filter out the built-in functions for changing drives and a few others
+        Get-Childitem -path function: | Where-Object {$_.name -notmatch "([A-Za-z]:)|(Get-Verb)|(prompt)|(cd)|(clear-host)|(more)|(pause)"} |
         select-object Name, Version, Source, @{Name = "Syntax"; Expression = {(Get-Command $_.name -Syntax|Out-String).Trim()}} |
         Out-GridView -title "Function Menu: Select one to run" -OutputMode Single |
         Foreach-Object {
-        Show-Command -Name $_.name
-        # [Microsoft.PowerShell.PSConsoleReadLine]::Insert($_.name)
-    }
-}
-
-if ($ver -lt 2.0.0) {
-Set-PSReadlineKeyHandler -Key F7 -BriefDescription HistoryList -Description "Show command history with Out-Gridview. [$($env:username)]" -ScriptBlock {
-    $pattern = $null
-    [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$pattern, [ref]$null)
-    if ($pattern) {
-        $pattern = [regex]::Escape($pattern)
+            Show-Command -Name $_.name
+        }
     }
 
-    $history = [System.Collections.ArrayList]@(
-        $last = ''
-        $lines = ''
-        foreach ($line in [System.IO.File]::ReadLines((Get-PSReadlineOption).HistorySavePath)) {
-            if ($line.EndsWith('`')) {
-                $line = $line.Substring(0, $line.Length - 1)
-                $lines = if ($lines) {
-                    "$lines`n$line"
+
+    Set-PSReadlineKeyHandler -Key F7 -BriefDescription HistoryList -Description "Show command history with Out-Gridview. [$($env:username)]" -ScriptBlock {
+        $pattern = $null
+        [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$pattern, [ref]$null)
+        if ($pattern) {
+            $pattern = [regex]::Escape($pattern)
+        }
+
+        $history = [System.Collections.ArrayList]@(
+            $last = ''
+            $lines = ''
+            foreach ($line in [System.IO.File]::ReadLines((Get-PSReadlineOption).HistorySavePath)) {
+                if ($line.EndsWith('`')) {
+                    $line = $line.Substring(0, $line.Length - 1)
+                    $lines = if ($lines) {
+                        "$lines`n$line"
+                    }
+                    else {
+                        $line
+                    }
+                    continue
                 }
-                else {
+
+                if ($lines) {
+                    $line = "$lines`n$line"
+                    $lines = ''
+                }
+
+                if (($line -cne $last) -and (!$pattern -or ($line -match $pattern))) {
+                    $last = $line
                     $line
                 }
-                continue
             }
+            )
+            $history.Reverse()
 
-            if ($lines) {
-                $line = "$lines`n$line"
-                $lines = ''
-            }
-
-            if (($line -cne $last) -and (!$pattern -or ($line -match $pattern))) {
-                $last = $line
-                $line
+            $command = $history | Select-Object -unique | Out-GridView -Title "PSReadline History - Select a command to insert at the prompt" -OutputMode Single
+            if ($command) {
+                [Microsoft.PowerShell.PSConsoleReadLine]::RevertLine()
+                [Microsoft.PowerShell.PSConsoleReadLine]::Insert(($command -join "`n"))
             }
         }
-    )
-    $history.Reverse()
 
-    $command = $history | Select-Object -unique | Out-GridView -Title "PSReadline History - Select a command to insert at the prompt" -OutputMode Single
-    if ($command) {
-        [Microsoft.PowerShell.PSConsoleReadLine]::RevertLine()
-        [Microsoft.PowerShell.PSConsoleReadLine]::Insert(($command -join "`n"))
-    }
-}
-}
+        Set-PSReadlineKeyHandler -key Alt+F5 -BriefDescription "ListMyHandlers" -Description "List my PSReadlineHandlers [$env:username]" -ScriptBlock {
 
-Set-PSReadlineKeyHandler -Key Shift+F1 -BriefDescription OnlineCommandHelp -LongDescription "Open online help for the current command. [$($env:username)]" -ScriptBlock {
+            (Get-PSReadlineKeyHandler -bound ).Where( {$_.description -match "\[$env:username\]"}) |
+            Select-Object -Property Key,Description | Out-GridView -title "My handlers"
+        }
+} #if desktop
 
-    $ast = $null
-    $tokens = $null
-    $errors = $null
-    $cursor = $null
-    [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$ast, [ref]$tokens, [ref]$errors, [ref]$cursor)
+    Set-PSReadlineKeyHandler -Key Shift+F1 -BriefDescription OnlineCommandHelp -LongDescription "Open online help for the current command. [$($env:username)]" -ScriptBlock {
 
-    $commandAst = $ast.FindAll( {
+        $ast = $null
+        $tokens = $null
+        $errors = $null
+        $cursor = $null
+        [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$ast, [ref]$tokens, [ref]$errors, [ref]$cursor)
+
+        $commandAst = $ast.FindAll( {
             $node = $args[0]
             $node -is [System.Management.Automation.Language.CommandAst] -and
             $node.Extent.StartOffset -le $cursor -and
@@ -186,7 +185,7 @@ Set-PSReadlineKeyHandler -Key Ctrl+j -BriefDescription JumpDirectory -LongDescri
     }
 }
 
-Set-PSReadlineKeyHandler -Key Alt+j -BriefDescription ShowDirectoryMarks -LongDescription "Show the currently marked directories in a popup. [$($env:username)]" -ScriptBlock {
+Set-PSReadlineKeyHandler -Key Alt+j -BriefDescription ShowDirectoryMarks -LongDescription "Show the currently marked directories. [$($env:username)]" -ScriptBlock {
 
     $data = $global:PSReadlineMarks.GetEnumerator() | Where-object {$_.key} | Sort-object key
     $data | foreach-object -begin {
@@ -199,36 +198,19 @@ Key`tDirectory
 
         $text += "{0}`t{1}`n" -f $_.key, $_.value
     }
-    $ws = New-Object -ComObject Wscript.Shell
-    $ws.popup($text, 10, "Use Ctrl+J to jump") | Out-Null
 
-    [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
-
-}
-
-if ($ver -lt 2.0.0) {
-    Set-PSReadlineKeyHandler -key Alt+F5 -BriefDescription "ListMyHandlers" -Description "List my PSReadlineHandlers [$env:username]" -ScriptBlock {
-
-        (Get-PSReadlineKeyHandler -bound ).Where( {$_.description -match "\[$env:username\]"}) |
-        Select-Object -Property Key,Description | Out-GridView -title "My handlers"
+    if ($PSedition -eq 'Desktop') {
+        $ws = New-Object -ComObject Wscript.Shell
+        $ws.popup($text, 10, "Use Ctrl+J to jump") | Out-Null
+        [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
+    }  else {
+        write-host "`n$text`n" -ForegroundColor Yellow
     }
+
 }
+
 #endregion
 
-Export-ModuleMember -Variable PSReadlineMarks
+Export-ModuleMember -Variable PSReadlineMarks -Function 'Optimize-PSReadlineHistory','Get-MyPSReadline','Get-MyPSReadlineKey','Get-PSReadlineColorOptions',
+'Show-PSReadlineColor','Import-PSReadlineColorOptions'
 
-<#
-$msg = @"
-PSReadLineHelper
-****************
-
-Added these options:
-$($(Get-myPSReadline | format-table | Out-string).Trim())
-
-Added these handlers:
-$($(Get-MyPSReadlineKey | Out-String).Trim())
-
-"@
-
-Write-Host $msg -ForegroundColor green
-#>

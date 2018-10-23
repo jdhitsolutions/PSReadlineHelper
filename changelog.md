@@ -1,5 +1,10 @@
 # Change Log for MyPSReadLine
 
+## v0.7.0
+
++ file cleanup for the PowerShell Gallery
++ Modified some code to begin working with PSReadline 2.0 in PowerShell Core
+
 ## v0.6.0
 
 + code cleanup

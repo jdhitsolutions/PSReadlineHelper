@@ -19,7 +19,7 @@ Show-PSReadlineColor [<CommonParameters>]
 
 ## DESCRIPTION
 
-This command will display the current color settings for PSReadline using the corresponding foreground and background colors. Use Set-PSReadlineOption to change anything that is difficult to read.
+This command will display the current color settings for PSReadline using the corresponding foreground and background colors. Use Set-PSReadlineOption to change anything that is difficult to read. This function is not needed in version 2.0 and later of PSReadline.
 
 ## EXAMPLES
 

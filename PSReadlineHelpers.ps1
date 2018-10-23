@@ -1,4 +1,4 @@
-#helper functions for PSReadline v1.2
+#helper functions for PSReadline
 
 Function Get-PSReadlineColorOptions {
     [cmdletbinding()]
@@ -29,20 +29,24 @@ Function Get-PSReadlineColorOptions {
     }
 }
 
-Function Show-PSReadlineColor {
+if ($ver -eq 1.2) {
 
-    [cmdletbinding()]
-    Param()
+    Function Show-PSReadlineColor {
 
-    $h = Get-PSReadlineColorOptions | sort-object TokenKind, Setting |
-    Group-object -Property TokenKind -AsHashTable -AsString
-    $h.GetEnumerator() | Sort-object Key | foreach-object {
-        write-host $($_.key).padright(20) -nonewline
-        $bg = $_.value.value[0]
-        $fg = $_.value.value[1]
-        write-Host (" [ {0} on {1} ]" -f $fg, $bg) -ForegroundColor $fg -BackgroundColor $bg
-    }
+        [cmdletbinding()]
+        Param()
+
+        #make it prettier on older versions.
+        $h = Get-PSReadlineColorOptions | sort-object TokenKind, Setting |
+        Group-object -Property TokenKind -AsHashTable -AsString
+        $h.GetEnumerator() | Sort-object Key | foreach-object {
+            write-host $($_.key).padright(20) -nonewline
+            $bg = $_.value.value[0]
+            $fg = $_.value.value[1]
+            write-Host (" [ {0} on {1} ]" -f $fg, $bg) -ForegroundColor $fg -BackgroundColor $bg
+        }
 }
+} #if v1.2
 
 Function Import-PSReadlineColorOptions {
 
@@ -57,13 +61,28 @@ Function Import-PSReadlineColorOptions {
 
     $data | where-object {$_.name -notmatch 'error|continuation|emphasis'} |
         foreach-object {
-        $Token = $_.name
-        $Foreground = $_.group.where( {$_.setting -match "fore"}).value
-        $Background = $_.group.where( {$_.setting -match "back"}).value
+            $Token = $_.name
+            $Foreground = $_.group.where( {$_.setting -match "fore"}).value
+            $Background = $_.group.where( {$_.setting -match "back"}).value
 
-        if ($PSCmdlet.ShouldProcess($Token, "Set foreground to $Foreground and background to $background")) {
-            Set-PSReadlineOption -TokenKind $token -ForegroundColor $Foreground -BackgroundColor $Background
-        }
+            if ($ver -gt 1.2) {
+                $colors = @{
+                    $token = $Foreground
+                }
+                $splat = @{
+                    Colors = $colors
+                }
+            }
+            else {
+                $splat = @{
+                 TokenKind = $token
+                 ForegroundColor = $Foreground
+                 BackgroundColor = $Background
+                }
+            }
+            if ($PSCmdlet.ShouldProcess($Token, "Set foreground to $Foreground and background to $background")) {
+                Set-PSReadlineOption @splat
+            }
     }
 
     $data | where-object {$_.name -match 'continuation'} |
@@ -71,8 +90,23 @@ Function Import-PSReadlineColorOptions {
         $Foreground = $_.group.where( {$_.setting -match "fore"}).value
         $Background = $_.group.where( {$_.setting -match "back"}).value
 
+        if ($ver -gt 1.2) {
+            $colors = @{
+                ContinuationPrompt = $Foreground
+            }
+            $splat = @{
+                Colors = $colors
+            }
+        }
+        else {
+            $splat = @{
+                continuationPromptBackgroundColor = $background
+                ContinuationPromptForegroundColor = $Foreground
+            }
+        }
+
         if ($PSCmdlet.ShouldProcess("ContinuationPrompt", "Set foreground to $Foreground and background to $background")) {
-            set-psreadlineoption -continuationPromptBackgroundColor $background -ContinuationPromptForegroundColor $Foreground
+            set-psreadlineoption @splat
         }
     }
 
@@ -81,8 +115,22 @@ Function Import-PSReadlineColorOptions {
         $Foreground = $_.group.where( {$_.setting -match "fore"}).value
         $Background = $_.group.where( {$_.setting -match "back"}).value
 
+        if ($ver -gt 1.2) {
+            $colors = @{
+                Emphasis = $Foreground
+            }
+            $splat = @{
+                Colors = $colors
+            }
+        }
+        else {
+            $splat = @{
+                EmphasisBackgroundColor = $background
+                EmphasisForegroundColor = $Foreground
+            }
+        }
         if ($PSCmdlet.ShouldProcess("Emphasis", "Set foreground to $Foreground and background to $background")) {
-            set-psreadlineoption -EmphasisBackgroundColor $background -EmphasisForegroundColor $Foreground
+            set-psreadlineoption @splat
         }
     }
 
@@ -91,8 +139,22 @@ Function Import-PSReadlineColorOptions {
         $Foreground = $_.group.where( {$_.setting -match "fore"}).value
         $Background = $_.group.where( {$_.setting -match "back"}).value
 
+        if ($ver -gt 1.2) {
+            $colors = @{
+                Error = $Foreground
+            }
+            $splat = @{
+                Colors = $colors
+            }
+        }
+        else {
+            $splat = @{
+                ErrorBackgroundColor = $background
+                ErrorForegroundColor = $Foreground
+            }
+        }
         if ($PSCmdlet.ShouldProcess("Error", "Set foreground to $Foreground and background to $background")) {
-            set-psreadlineoption -ErrorBackgroundColor $background -ErrorForegroundColor $Foreground
+            set-psreadlineoption @splat
         }
     }
 }
