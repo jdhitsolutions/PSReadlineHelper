@@ -6,20 +6,6 @@ $ver = (get-module psreadline).version
 
 #region my PSReadlineOptions
 
-#my customizations
-if ($ver -gt 1.2) {
-    $token = @{
-        Colors = @{String="Cyan"}
-    }
-}
-else {
-$token = @{
-    TokenKind = "String"
-    ForegroundColor = "Cyan"
-}
-}
-
-Set-PSReadlineOption @token
 
 $options = @{
     HistoryNoDuplicates = $True
@@ -44,7 +30,7 @@ Set-PSReadlineKeyHandler -key Ctrl+h -BriefDescription "Open PSReadlineHistory" 
     Invoke-Item -Path $(Get-PSReadlineOption).HistorySavePath
 }
 
-if ($PSedition -eq 'Desktop') {
+if ($PSedition -eq 'Desktop' -OR $IsWindows) {
 
     Set-PSReadlineKeyHandler -key Ctrl+Alt+F -BriefDescription "Function Menu" -Description "Display all functions as menu using Out-GridView. [$($env:username)]" -ScriptBlock {
 
@@ -60,7 +46,6 @@ if ($PSedition -eq 'Desktop') {
             Show-Command -Name $_.name
         }
     }
-
 
     Set-PSReadlineKeyHandler -Key F7 -BriefDescription HistoryList -Description "Show command history with Out-Gridview. [$($env:username)]" -ScriptBlock {
         $pattern = $null
@@ -199,7 +184,7 @@ Key`tDirectory
         $text += "{0}`t{1}`n" -f $_.key, $_.value
     }
 
-    if ($PSedition -eq 'Desktop') {
+    if ($PSedition -eq 'Desktop' -or $IsWindows) {
         $ws = New-Object -ComObject Wscript.Shell
         $ws.popup($text, 10, "Use Ctrl+J to jump") | Out-Null
         [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
@@ -211,6 +196,4 @@ Key`tDirectory
 
 #endregion
 
-Export-ModuleMember -Variable PSReadlineMarks -Function 'Optimize-PSReadlineHistory','Get-MyPSReadline','Get-MyPSReadlineKey','Get-PSReadlineColorOptions',
-'Show-PSReadlineColor','Import-PSReadlineColorOptions'
-
+Export-ModuleMember -Variable PSReadlineMarks -Function 'Optimize-PSReadlineHistory','Get-MyPSReadline','Get-MyPSReadlineKey'

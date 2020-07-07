@@ -31,7 +31,7 @@ Function Get-PSReadlineColorOptions {
 
 if ($ver -eq 1.2) {
 
-    Function Show-PSReadlineColor {
+    Function OldShow-PSReadlineColor {
 
         [cmdletbinding()]
         Param()

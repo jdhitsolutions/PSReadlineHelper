@@ -1,5 +1,11 @@
 # Change Log for MyPSReadLine
 
+## v0.8.0
+
++ Modified to support PSReadline 2.0
++ Updated `README.md`
++ Updated `license.txt`
+
 ## v0.7.0
 
 + file cleanup for the PowerShell Gallery
